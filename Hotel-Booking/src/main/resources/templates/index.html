@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('HotelHaven | Home')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<section class="hero-shell">
+    <div class="container">
+        <div class="hero-panel">
+            <span class="hero-kicker">Hotel Booking and Management System</span>
+            <h1 class="hero-title">Plan elegant stays with <em>real-time room booking</em> and a polished admin workflow.</h1>
+            <p class="hero-subtitle">Browse premium hotels, filter by availability, complete a booking with invoice + payment simulation, and manage everything from a college-ready dashboard.</p>
+            <div class="row g-3 align-items-end mt-4">
+                <div class="col-lg-3 position-relative">
+                    <label class="form-label">Where are you going?</label>
+                    <input id="heroQuery" class="form-control" autocomplete="off" placeholder="Jaipur, Goa, Delhi...">
+                    <div id="heroLocationDropdown" class="location-dropdown d-none position-absolute w-100 bg-white border border-light rounded shadow-lg mt-1 text-start" style="max-height: 300px; overflow-y: auto; z-index: 1050;"></div>
+                </div>
+                <div class="col-lg-2">
+                    <label class="form-label">Check-in</label>
+                    <input id="heroCheckIn" type="date" class="form-control">
+                </div>
+                <div class="col-lg-2">
+                    <label class="form-label">Check-out</label>
+                    <input id="heroCheckOut" type="date" class="form-control">
+                </div>
+                <div class="col-lg-2">
+                    <label class="form-label">Room Type</label>
+                    <select id="heroRoomType" class="form-select">
+                        <option value="">Any</option>
+                        <option value="SINGLE">Single</option>
+                        <option value="DOUBLE">Double</option>
+                        <option value="DELUXE">Deluxe</option>
+                        <option value="SUITE">Suite</option>
+                    </select>
+                </div>
+                <div class="col-lg-3 d-grid gap-2 d-md-flex">
+                    <button class="btn btn-accent w-100" onclick="goToResults()">Search Hotels</button>
+                    <a class="btn btn-outline-brand w-100" th:href="@{/register}">Create Account</a>
+                </div>
+            </div>
+            <div class="row g-3 mt-4">
+                <div class="col-md-4 quick-stat"><strong>JWT Security</strong><div class="text-muted small">Role-based customer and admin access</div></div>
+                <div class="col-md-4 quick-stat"><strong>Date-wise Availability</strong><div class="text-muted small">No double-booking on overlapping dates</div></div>
+                <div class="col-md-4 quick-stat"><strong>Invoices and Payments</strong><div class="text-muted small">Automated bill generation and payment simulation</div></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="container py-2">
+    <div class="surface-section">
+        <div class="d-flex justify-content-between align-items-end flex-wrap gap-3 mb-3">
+            <div>
+                <h2 class="section-title">Featured Hotels</h2>
+                <p class="section-copy mb-0">Demo-ready properties seeded automatically on startup.</p>
+            </div>
+            <a class="btn btn-outline-brand" th:href="@{/hotels}">View All Hotels</a>
+        </div>
+        <div id="featuredHotels" class="result-grid"></div>
+    </div>
+</section>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    async function loadFeaturedHotels() {
+        const hotels = await hotelApp.api('/api/hotels?sort=rating');
+        const container = document.getElementById('featuredHotels');
+        container.innerHTML = hotels.slice(0, 3).map(renderHotelCard).join('');
+    }
+
+    function renderHotelCard(hotel) {
+        const image = hotel.imageUrl || 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80';
+        return `
+            <article class="hotel-card">
+                <img class="hotel-thumb" src="${image}" alt="${hotel.name}">
+                <div class="hotel-card-body">
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                        <div>
+                            <h3 class="mb-1">${hotel.name}</h3>
+                            <div class="text-muted small">${hotel.location}</div>
+                        </div>
+                        <span class="metric-chip">${hotel.rating ? hotel.rating.toFixed(1) : '4.5'} ★</span>
+                    </div>
+                    <p class="text-muted">${hotel.description || 'Comfortable stay with modern amenities and professional service.'}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong>${hotelApp.formatCurrency(hotel.lowestPricePerNight || 0)} <span class="text-muted small">/ night</span></strong>
+                        <a class="btn btn-accent btn-sm" href="/hotels/${hotel.id}">Explore</a>
+                    </div>
+                </div>
+            </article>`;
+    }
+
+    function goToResults() {
+        const params = new URLSearchParams();
+        ['heroQuery', 'heroCheckIn', 'heroCheckOut', 'heroRoomType'].forEach((id) => {
+            const value = document.getElementById(id).value;
+            if (value) {
+                const keyMap = { heroQuery: 'query', heroCheckIn: 'checkIn', heroCheckOut: 'checkOut', heroRoomType: 'roomType' };
+                params.set(keyMap[id], value);
+            }
+        });
+        window.location.href = `/hotels?${params.toString()}`;
+    }
+
+    loadFeaturedHotels();
+    hotelApp.buildLocationDropdown('heroQuery', 'heroLocationDropdown');
+
+    const now = new Date();
+    const tzOffset = now.getTimezoneOffset() * 60000;
+    const today = (new Date(now - tzOffset)).toISOString().slice(0, -1).split('T')[0];
+    document.getElementById('heroCheckIn').min = today;
+    document.getElementById('heroCheckOut').min = today;
+</script>
+</body>
+</html>

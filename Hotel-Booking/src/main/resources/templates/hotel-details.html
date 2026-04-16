@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('HotelHaven | Hotel Details')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<section class="container py-5" th:attr="data-hotel-id=${hotelId}" id="hotelPage">
+    <div id="hotelHero" class="hero-panel mb-4"></div>
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="info-card p-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <div>
+                        <h2 class="section-title mb-0">Available Rooms</h2>
+                        <p class="section-copy mb-0">Availability updates for the selected dates.</p>
+                    </div>
+                </div>
+                <div id="roomResults" class="d-grid gap-3"></div>
+            </div>
+            <div id="reviewsSection" class="info-card p-4 mt-4"></div>
+        </div>
+        <div class="col-lg-4">
+            <div class="form-panel">
+                <h3 class="mb-3">Plan Your Stay</h3>
+                <div class="mb-3">
+                    <label class="form-label">Check-in</label>
+                    <input id="checkInDate" type="date" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Check-out</label>
+                    <input id="checkOutDate" type="date" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Guests</label>
+                    <input id="numberOfGuests" type="number" min="1" value="1" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Room Type</label>
+                    <select id="roomTypeFilter" class="form-select">
+                        <option value="">Any</option>
+                        <option value="SINGLE">Single</option>
+                        <option value="DOUBLE">Double</option>
+                        <option value="DELUXE">Deluxe</option>
+                        <option value="SUITE">Suite</option>
+                    </select>
+                </div>
+                <button class="btn btn-accent w-100" onclick="loadHotel()">Check Availability</button>
+                <p class="small text-muted mt-3 mb-0">Tip: the booking API checks overlapping dates, guest capacity, and invoice total automatically.</p>
+            </div>
+        </div>
+    </div>
+</section>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    const hotelId = document.getElementById('hotelPage').dataset.hotelId;
+
+    function buildQuery() {
+        const params = new URLSearchParams();
+        ['checkInDate', 'checkOutDate', 'roomTypeFilter'].forEach((field) => {
+            const value = document.getElementById(field).value;
+            if (value) {
+                const keyMap = { checkInDate: 'checkIn', checkOutDate: 'checkOut', roomTypeFilter: 'roomType' };
+                params.set(keyMap[field], value);
+            }
+        });
+        return params;
+    }
+
+    async function loadHotel() {
+        const params = buildQuery();
+        const hotel = await hotelApp.api(`/api/hotels/${hotelId}?${params.toString()}`);
+        renderHotel(hotel);
+    }
+
+    function renderHotel(hotel) {
+        const image = hotel.imageUrl || 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=80';
+        document.getElementById('hotelHero').innerHTML = `
+            <div class="row g-4 align-items-center">
+                <div class="col-lg-7">
+                    <span class="hero-kicker">${hotel.location}</span>
+                    <h1 class="hero-title mt-3 mb-2">${hotel.name}</h1>
+                    <p class="hero-subtitle">${hotel.description || 'A comfortable hotel with stylish rooms and dependable service.'}</p>
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <span class="metric-chip">${hotel.rating ? hotel.rating.toFixed(1) : '4.5'} ★ Rating</span>
+                        <span class="metric-chip">${hotel.availableRooms} rooms available</span>
+                        <span class="metric-chip">Starts ${hotelApp.formatCurrency(hotel.lowestPricePerNight || 0)}</span>
+                    </div>
+                    <div class="mt-4 mb-2"><strong>Amenities:</strong></div>
+                    <div class="d-flex flex-wrap">
+                        ${(hotel.amenities || 'WiFi, Breakfast, Housekeeping').split(',').map(a => `<span class="metric-chip bg-light rounded-pill border border-secondary border-opacity-10 me-2 mb-2 px-3 py-1">${a.trim()}</span>`).join('')}
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <img src="${image}" class="img-fluid rounded-4 shadow-sm mb-4" alt="${hotel.name}">
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <div class="gallery-item-container">
+                                <img src="${hotel.roomImageUrl || 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=400&q=80'}" class="img-fluid rounded-3 shadow-sm border border-light" alt="Room">
+                                <span class="gallery-label">Room</span>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="gallery-item-container">
+                                <img src="${hotel.washroomImageUrl || 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=400&q=80'}" class="img-fluid rounded-3 shadow-sm border border-light" alt="Washroom">
+                                <span class="gallery-label">Washroom</span>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="gallery-item-container">
+                                <img src="${hotel.balconyImageUrl || 'https://images.unsplash.com/photo-1513584684374-8bdb74838a0f?auto=format&fit=crop&w=400&q=80'}" class="img-fluid rounded-3 shadow-sm border border-light" alt="Balcony">
+                                <span class="gallery-label">Balcony</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
+        const rooms = hotel.rooms || [];
+        const mockReviews = [
+            "The AC worked perfectly and the bathtub was incredibly relaxing!",
+            "Excellent free breakfast buffet with a great selection.",
+            "Loved the modern aesthetic and the quick room service.",
+            "Very clean and well maintained property. Would definitely return.",
+            "Great location, easy to access everything, and friendly staff."
+        ];
+        const selectedReviews = [mockReviews[(hotel.id) % mockReviews.length], mockReviews[(hotel.id + 1) % mockReviews.length], mockReviews[(hotel.id + 2) % mockReviews.length]];
+        
+        document.getElementById('reviewsSection').innerHTML = `
+            <h3 class="mb-4">Guest Reviews</h3>
+            ` + selectedReviews.map((r, i) => `
+            <div class="mb-3 pb-3 ${i < 2 ? 'border-bottom' : ''}">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="bg-light text-muted d-flex align-items-center justify-content-center rounded-circle me-3" style="width: 40px; height: 40px; font-weight: bold;">
+                        ${String.fromCharCode(65 + ((hotel.id * i + 3) % 26))}
+                    </div>
+                    <div>
+                        <div class="fw-bold">Verified Guest</div>
+                        <div class="small text-warning">★★★★★ <span class="text-muted ms-1">Recent Stay</span></div>
+                    </div>
+                </div>
+                <p class="text-muted mb-0">"${r}"</p>
+            </div>`).join('');
+
+        document.getElementById('roomResults').innerHTML = rooms.length
+            ? rooms.map((room) => `
+                <div class="booking-card p-3">
+                    <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
+                        <div>
+                            <div class="d-flex flex-wrap gap-2 mb-2">
+                                <span class="type-badge">${room.roomType}</span>
+                                <span class="metric-chip">Room ${room.roomNumber}</span>
+                                <span class="metric-chip">Capacity ${room.capacity}</span>
+                            </div>
+                            <div class="price-display">${hotelApp.formatCurrency(room.pricePerNight)} <small>per night</small></div>
+                            <div class="text-muted small mt-1">${room.availableForDates ? 'Available for selected dates' : 'Not available for selected dates'}</div>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-accent" ${room.availableForDates ? '' : 'disabled'} onclick="bookRoom(${room.id})">Book Now</button>
+                        </div>
+                    </div>
+                </div>`).join('')
+            : `<div class="empty-state"><h3>No rooms available</h3><p>Try adjusting your dates or room type.</p></div>`;
+    }
+
+    async function bookRoom(roomId) {
+        if (!hotelApp.requireAuth()) return;
+        try {
+            const booking = await hotelApp.api('/api/bookings', {
+                method: 'POST',
+                body: JSON.stringify({
+                    roomId,
+                    checkInDate: document.getElementById('checkInDate').value,
+                    checkOutDate: document.getElementById('checkOutDate').value,
+                    numberOfGuests: Number(document.getElementById('numberOfGuests').value)
+                })
+            });
+            if (!booking || !booking.bookingId) {
+                // Session expired — api() already called logout() and will redirect
+                return;
+            }
+            window.location.href = `/booking-confirmation?bookingId=${booking.bookingId}`;
+        } catch (error) {
+            alert(error.message);
+        }
+    }
+
+    const now = new Date();
+    const tzOffset = now.getTimezoneOffset() * 60000;
+    const localISOTime = (new Date(now - tzOffset)).toISOString().slice(0, -1);
+    const today = localISOTime.split('T')[0];
+    document.getElementById('checkInDate').value = today;
+    document.getElementById('checkInDate').min = today;
+
+    const then = new Date(now.getTime() + 86400000);
+    const tzOffsetThen = then.getTimezoneOffset() * 60000;
+    const tomorrow = (new Date(then - tzOffsetThen)).toISOString().slice(0, -1).split('T')[0];
+    document.getElementById('checkOutDate').value = tomorrow;
+    document.getElementById('checkOutDate').min = today;
+    loadHotel();
+</script>
+</body>
+</html>

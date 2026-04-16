@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('HotelHaven | Admin Dashboard')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<section class="container py-5">
+    <div class="d-flex justify-content-between align-items-end flex-wrap gap-3 mb-4">
+        <div>
+            <h1 class="section-title">Admin Dashboard</h1>
+            <p class="section-copy mb-0">Monitor bookings, revenue, rooms, and hotel inventory from one place.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-accent" href="/admin/hotels/new">Add Hotel</a>
+        </div>
+    </div>
+
+    <div id="analyticsGrid" class="row g-3 mb-4"></div>
+
+    <div class="row g-4">
+        <div class="col-xl-7">
+            <div class="admin-table-wrap">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="mb-0">Recent Bookings</h3>
+                </div>
+                <div id="bookingAdminTable"></div>
+            </div>
+        </div>
+        <div class="col-xl-5">
+            <div class="admin-table-wrap mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="mb-0">Hotels and Rooms</h3>
+                    <a class="btn btn-outline-brand btn-sm" href="/hotels">Preview Customer View</a>
+                </div>
+                <div id="hotelAdminList" class="d-grid gap-3"></div>
+            </div>
+        </div>
+    </div>
+</section>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    hotelApp.requireRole('ROLE_ADMIN');
+
+    async function loadDashboard() {
+        const [analytics, bookings, hotels] = await Promise.all([
+            hotelApp.api('/api/admin/analytics'),
+            hotelApp.api('/api/admin/bookings'),
+            hotelApp.api('/api/hotels?sort=rating'),
+        ]);
+
+        document.getElementById('analyticsGrid').innerHTML = [
+            ['Total Users', analytics.totalUsers],
+            ['Total Hotels', analytics.totalHotels],
+            ['Total Rooms', analytics.totalRooms],
+            ['Total Bookings', analytics.totalBookings],
+            ['Cancelled Bookings', analytics.cancelledBookings],
+            ['Revenue', hotelApp.formatCurrency(analytics.totalRevenue)]
+        ].map(([label, value]) => `
+            <div class="col-md-6 col-xl-4">
+                <div class="dashboard-card h-100">
+                    <div class="small text-muted text-uppercase fw-bold">${label}</div>
+                    <div class="dashboard-value mt-2">${value}</div>
+                </div>
+            </div>`).join('');
+
+        document.getElementById('bookingAdminTable').innerHTML = bookings.length ? `
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Hotel</th>
+                            <th>Stay</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Update</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${bookings.map((booking) => `
+                            <tr>
+                                <td>
+                                    <div class="fw-bold">${booking.hotelName}</div>
+                                    <div class="small text-muted">${booking.roomType} • ${booking.roomNumber}</div>
+                                </td>
+                                <td>${booking.checkInDate}<br><span class="small text-muted">to ${booking.checkOutDate}</span></td>
+                                <td>${hotelApp.formatCurrency(booking.totalPrice)}</td>
+                                <td>
+                                    <span class="status-badge ${hotelApp.toStatusClass(booking.bookingStatus)}">${booking.bookingStatus}</span>
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm" onchange="updateStatus(${booking.bookingId}, this.value)">
+                                        ${['PENDING','CONFIRMED','CHECKED_IN','CHECKED_OUT','CANCELLED'].map((status) => `<option value="${status}" ${status === booking.bookingStatus ? 'selected' : ''}>${status}</option>`).join('')}
+                                    </select>
+                                </td>
+                            </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>` : '<div class="empty-state">No bookings yet.</div>';
+
+        document.getElementById('hotelAdminList').innerHTML = hotels.map((hotel) => `
+            <div class="booking-card p-3">
+                <div class="d-flex justify-content-between align-items-start gap-3">
+                    <div>
+                        <div class="fw-bold">${hotel.name}</div>
+                        <div class="small text-muted">${hotel.location}</div>
+                        <div class="small text-muted mt-1">${hotel.totalRooms} rooms • ${hotel.availableRooms} available</div>
+                    </div>
+                    <div class="d-flex flex-column gap-2">
+                        <a class="btn btn-outline-brand btn-sm" href="/admin/hotels/${hotel.id}/edit">Edit Hotel</a>
+                        <a class="btn btn-accent btn-sm" href="/admin/hotels/${hotel.id}/rooms/new">Add Room</a>
+                        <button class="btn btn-outline-danger btn-sm" onclick="deleteHotel(${hotel.id})">Delete</button>
+                    </div>
+                </div>
+            </div>`).join('');
+    }
+
+    async function updateStatus(id, status) {
+        try {
+            await hotelApp.api(`/api/admin/bookings/${id}/status`, {
+                method: 'PUT',
+                body: JSON.stringify({ bookingStatus: status })
+            });
+            loadDashboard();
+        } catch (error) {
+            alert(error.message);
+            loadDashboard();
+        }
+    }
+
+    async function deleteHotel(id) {
+        if (!confirm('Delete this hotel and its rooms?')) {
+            return;
+        }
+        await hotelApp.api(`/api/hotels/${id}`, { method: 'DELETE' });
+        loadDashboard();
+    }
+
+    loadDashboard();
+</script>
+</body>
+</html>

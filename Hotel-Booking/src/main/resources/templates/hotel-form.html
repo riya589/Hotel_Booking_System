@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('HotelHaven | Hotel Form')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<section class="container py-5" id="hotelFormPage" th:attr="data-hotel-id=${hotelId}">
+    <div class="row justify-content-center">
+        <div class="col-xl-8">
+            <div class="form-panel">
+                <h1 class="section-title" id="formTitle">Add Hotel</h1>
+                <p class="section-copy">Create or update hotel details for the management panel.</p>
+                <div id="hotelFormAlert" class="alert alert-danger d-none"></div>
+                <form id="hotelForm" class="row g-3">
+                    <div class="col-md-6"><label class="form-label">Hotel Name</label><input id="name" class="form-control" required></div>
+                    <div class="col-md-6"><label class="form-label">Location / City</label><input id="location" class="form-control" required></div>
+                    <div class="col-12"><label class="form-label">Address</label><input id="address" class="form-control" required></div>
+                    <div class="col-md-8"><label class="form-label">Main Hotel Image URL</label><input id="imageUrl" class="form-control" placeholder="https://..."></div>
+                    <div class="col-md-4"><label class="form-label">Total Rooms</label><input id="totalRooms" type="number" min="1" max="50" class="form-control" placeholder="5"></div>
+                    <div class="col-md-4"><label class="form-label">Room Image URL</label><input id="roomImageUrl" class="form-control" placeholder="https://..."></div>
+                    <div class="col-md-4"><label class="form-label">Washroom Image URL</label><input id="washroomImageUrl" class="form-control" placeholder="https://..."></div>
+                    <div class="col-md-4"><label class="form-label">Balcony Image URL</label><input id="balconyImageUrl" class="form-control" placeholder="https://..."></div>
+                    <div class="col-md-4"><label class="form-label">Rating (0–5)</label><input id="rating" type="number" min="0" max="5" step="0.1" class="form-control"></div>
+                    <div class="col-12"><label class="form-label">Amenities</label><textarea id="amenities" class="form-control" rows="2" placeholder="WiFi, Pool, Spa, Gym..."></textarea></div>
+                    <div class="col-12"><label class="form-label">Description</label><textarea id="description" class="form-control" rows="4" placeholder="A brief description of the hotel..."></textarea></div>
+                    <div class="col-12 d-flex gap-2 justify-content-end">
+                        <a class="btn btn-outline-brand" href="/admin/dashboard">Cancel</a>
+                        <button class="btn btn-accent" type="submit">Save Hotel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    hotelApp.requireRole('ROLE_ADMIN');
+    const hotelId = document.getElementById('hotelFormPage').dataset.hotelId;
+
+    async function initForm() {
+        if (!hotelId) return;
+        document.getElementById('formTitle').textContent = 'Edit Hotel';
+        const hotel = await hotelApp.api(`/api/hotels/${hotelId}`);
+        ['name','location','address','imageUrl','roomImageUrl','washroomImageUrl','balconyImageUrl','rating','amenities','description','totalRooms'].forEach((field) => {
+            if (document.getElementById(field)) document.getElementById(field).value = hotel[field] || '';
+        });
+    }
+
+    document.getElementById('hotelForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const alertBox = document.getElementById('hotelFormAlert');
+        alertBox.classList.add('d-none');
+        try {
+            const payload = {
+                name: document.getElementById('name').value,
+                location: document.getElementById('location').value,
+                address: document.getElementById('address').value,
+                imageUrl: document.getElementById('imageUrl').value,
+                roomImageUrl: document.getElementById('roomImageUrl').value,
+                washroomImageUrl: document.getElementById('washroomImageUrl').value,
+                balconyImageUrl: document.getElementById('balconyImageUrl').value,
+                rating: document.getElementById('rating').value || null,
+                amenities: document.getElementById('amenities').value,
+                description: document.getElementById('description').value,
+                totalRooms: document.getElementById('totalRooms').value ? parseInt(document.getElementById('totalRooms').value) : 5
+            };
+            await hotelApp.api(hotelId ? `/api/hotels/${hotelId}` : '/api/hotels', {
+                method: hotelId ? 'PUT' : 'POST',
+                body: JSON.stringify(payload)
+            });
+            window.location.href = '/admin/dashboard';
+        } catch (error) {
+            alertBox.textContent = error.message;
+            alertBox.classList.remove('d-none');
+        }
+    });
+
+    initForm();
+</script>
+</body>
+</html>

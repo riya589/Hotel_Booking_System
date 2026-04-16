@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('HotelHaven | Booking Confirmation')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<section class="container py-5">
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="invoice-card">
+                <span class="hero-kicker mb-3">Step 2 of 2</span>
+                <h1 class="section-title">Review booking and complete payment</h1>
+                <p class="section-copy">Your booking is created in pending mode. Complete payment to confirm it instantly.</p>
+                <div id="bookingSummary"></div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="form-panel">
+                <h3 class="mb-3">Payment Simulation</h3>
+                <div id="paymentAlert" class="alert alert-danger d-none"></div>
+                <form id="paymentForm" class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Payment Method</label>
+                        <select id="paymentMethod" class="form-select">
+                            <option value="CARD">Card</option>
+                            <option value="UPI">UPI</option>
+                            <option value="CASH">Cash</option>
+                        </select>
+                    </div>
+                    <div class="col-12 card-only">
+                        <label class="form-label">Card Number</label>
+                        <input id="cardNumber" class="form-control" maxlength="16" placeholder="1234123412341234">
+                    </div>
+                    <div class="col-md-8 card-only">
+                        <label class="form-label">Card Holder Name</label>
+                        <input id="cardHolderName" class="form-control" placeholder="Hotel Haven User">
+                    </div>
+                    <div class="col-md-4 card-only">
+                        <label class="form-label">CVV</label>
+                        <input id="cvv" class="form-control" maxlength="3" placeholder="123">
+                    </div>
+                    <div class="col-12 d-grid">
+                        <button class="btn btn-accent" type="submit">Pay Now</button>
+                    </div>
+                </form>
+                <div class="mt-3 small text-muted">Card succeeds when the card number contains 16 digits. UPI and Cash succeed instantly in this demo.</div>
+            </div>
+        </div>
+    </div>
+</section>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    hotelApp.requireAuth();
+    const bookingId = new URLSearchParams(window.location.search).get('bookingId');
+    let booking;
+    let invoice;
+
+    document.getElementById('paymentMethod').addEventListener('change', (event) => {
+        const showCardFields = event.target.value === 'CARD';
+        document.querySelectorAll('.card-only').forEach((element) => element.classList.toggle('d-none', !showCardFields));
+    });
+
+    async function initPage() {
+        booking = await hotelApp.api(`/api/bookings/${bookingId}`);
+        invoice = await hotelApp.api(`/api/bookings/${bookingId}/bill`);
+        renderSummary();
+    }
+
+    function renderSummary() {
+        document.getElementById('bookingSummary').innerHTML = `
+            <div class="summary-list">
+                <div class="summary-row"><span>Hotel</span><strong>${booking.hotelName}</strong></div>
+                <div class="summary-row"><span>Room</span><strong>${booking.roomType} (${booking.roomNumber})</strong></div>
+                <div class="summary-row"><span>Stay</span><strong>${booking.checkInDate} to ${booking.checkOutDate}</strong></div>
+                <div class="summary-row"><span>Guests</span><strong>${booking.numberOfGuests}</strong></div>
+                <div class="summary-row"><span>Total nights</span><strong>${booking.totalNights}</strong></div>
+                <hr>
+                <div class="summary-row"><span>Base amount</span><strong>${hotelApp.formatCurrency(invoice.baseAmount)}</strong></div>
+                <div class="summary-row"><span>Tax</span><strong>${hotelApp.formatCurrency(invoice.taxAmount)}</strong></div>
+                <div class="summary-row"><span>Service charge</span><strong>${hotelApp.formatCurrency(invoice.serviceCharge)}</strong></div>
+                <div class="summary-row"><span>Final amount</span><strong>${hotelApp.formatCurrency(invoice.finalAmount)}</strong></div>
+            </div>
+            <div class="mt-4 d-flex gap-2 flex-wrap">
+                <a class="btn btn-outline-brand" href="/invoice/${booking.bookingId}">Preview Invoice</a>
+                <a class="btn btn-outline-brand" href="/my-bookings">View My Bookings</a>
+            </div>`;
+    }
+
+    document.getElementById('paymentForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const alertBox = document.getElementById('paymentAlert');
+        alertBox.classList.add('d-none');
+        try {
+            await hotelApp.api(`/api/payments/${bookingId}`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    bookingId: Number(bookingId),
+                    amount: invoice.finalAmount,
+                    paymentMethod: document.getElementById('paymentMethod').value,
+                    cardNumber: document.getElementById('cardNumber').value,
+                    cardHolderName: document.getElementById('cardHolderName').value,
+                    cvv: document.getElementById('cvv').value
+                })
+            });
+            window.location.href = '/my-bookings';
+        } catch (error) {
+            alertBox.textContent = error.message;
+            alertBox.classList.remove('d-none');
+        }
+    });
+
+    initPage();
+</script>
+</body>
+</html>

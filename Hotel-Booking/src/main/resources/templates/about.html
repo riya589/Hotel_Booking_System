@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('HotelHaven | About')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<section class="hero-shell">
+    <div class="container">
+        <div class="hero-panel">
+            <span class="hero-kicker">About This Project</span>
+            <h1 class="hero-title">Built for learning. <em>Designed for real use.</em></h1>
+            <p class="hero-subtitle">HotelHaven is a full-stack hotel booking and management system developed as a college project, demonstrating modern web application architecture from end to end.</p>
+        </div>
+    </div>
+</section>
+
+<section class="container py-4">
+    <div class="row g-4">
+
+        <!-- What is it -->
+        <div class="col-lg-8">
+            <div class="info-card p-4">
+                <h2 class="section-title mb-3">What is HotelHaven?</h2>
+                <p class="text-muted" style="line-height: 1.8;">
+                    HotelHaven is a production-inspired hotel booking platform where users can browse hotels, filter by city and room type,
+                    check date-wise availability, and complete a booking with a full invoice and simulated payment flow.
+                    Admins can manage hotels, rooms, and bookings through a dedicated dashboard.
+                </p>
+                <p class="text-muted" style="line-height: 1.8;">
+                    The project was designed to simulate a real-world software system — with JWT-based authentication, role-based access control,
+                    clean REST APIs, and a Thymeleaf-powered frontend — while remaining approachable for academic demonstration and evaluation.
+                </p>
+            </div>
+        </div>
+
+        <!-- Role highlight -->
+        <div class="col-lg-4">
+            <div class="info-card p-4 h-100">
+                <h2 class="section-title mb-3" style="font-size: 1.6rem;">Two Roles</h2>
+                <div class="d-flex flex-column gap-3">
+                    <div class="quick-stat">
+                        <strong>👤 Customer</strong>
+                        <div class="text-muted small mt-1">Browse hotels, book rooms, view invoices, manage bookings</div>
+                    </div>
+                    <div class="quick-stat">
+                        <strong>🛡️ Admin</strong>
+                        <div class="text-muted small mt-1">Add &amp; edit hotels and rooms, manage all bookings and statuses</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tech Stack -->
+        <div class="col-12">
+            <div class="info-card p-4">
+                <h2 class="section-title mb-4" style="font-size: 1.8rem;">Tech Stack</h2>
+                <div class="row g-3">
+                    <div class="col-sm-6 col-md-4 col-lg-2">
+                        <div class="stat-card text-center" style="border-top: 3px solid var(--accent);">
+                            <div style="font-size: 2rem;">☕</div>
+                            <div class="fw-bold mt-1">Spring Boot</div>
+                            <div class="text-muted small">Backend Framework</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 col-lg-2">
+                        <div class="stat-card text-center" style="border-top: 3px solid var(--accent);">
+                            <div style="font-size: 2rem;">🔐</div>
+                            <div class="fw-bold mt-1">JWT Auth</div>
+                            <div class="text-muted small">Security Layer</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 col-lg-2">
+                        <div class="stat-card text-center" style="border-top: 3px solid var(--accent);">
+                            <div style="font-size: 2rem;">🗄️</div>
+                            <div class="fw-bold mt-1">MySQL + JPA</div>
+                            <div class="text-muted small">Database</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 col-lg-2">
+                        <div class="stat-card text-center" style="border-top: 3px solid var(--accent);">
+                            <div style="font-size: 2rem;">🌿</div>
+                            <div class="fw-bold mt-1">Thymeleaf</div>
+                            <div class="text-muted small">HTML Templating</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 col-lg-2">
+                        <div class="stat-card text-center" style="border-top: 3px solid var(--accent);">
+                            <div style="font-size: 2rem;">🅱️</div>
+                            <div class="fw-bold mt-1">Bootstrap 5</div>
+                            <div class="text-muted small">UI Components</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 col-lg-2">
+                        <div class="stat-card text-center" style="border-top: 3px solid var(--accent);">
+                            <div style="font-size: 2rem;">⚡</div>
+                            <div class="fw-bold mt-1">Vanilla JS</div>
+                            <div class="text-muted small">Frontend Logic</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Features -->
+        <div class="col-12">
+            <div class="info-card p-4">
+                <h2 class="section-title mb-4" style="font-size: 1.8rem;">Key Features</h2>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <ul class="list-unstyled d-flex flex-column gap-2 text-muted" style="line-height: 1.8;">
+                            <li>✅ JWT-secured login &amp; registration</li>
+                            <li>✅ Role-based access (Customer vs Admin)</li>
+                            <li>✅ Hotel search with city, price &amp; room type filters</li>
+                            <li>✅ Date-aware room availability (no double-booking)</li>
+                            <li>✅ Full booking flow with confirmation screen</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul class="list-unstyled d-flex flex-column gap-2 text-muted" style="line-height: 1.8;">
+                            <li>✅ Invoice generation per booking</li>
+                            <li>✅ Simulated payment processing</li>
+                            <li>✅ Admin dashboard with stats and management tools</li>
+                            <li>✅ Hotel image gallery support</li>
+                            <li>✅ Mobile-responsive design</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="col-12 text-center py-3">
+            <a class="btn btn-accent btn-lg px-5 me-3" th:href="@{/hotels}">Browse Hotels</a>
+            <a class="btn btn-outline-brand btn-lg px-5" th:href="@{/register}">Create Account</a>
+        </div>
+
+    </div>
+</section>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

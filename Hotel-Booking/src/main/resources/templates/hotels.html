@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('HotelHaven | Hotel Search')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<section class="container py-5">
+    <div class="filter-card mb-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-lg-3 position-relative">
+                <label class="form-label">Search hotel or location</label>
+                <input id="query" class="form-control" autocomplete="off" placeholder="Goa, suite, city center">
+                <div id="hotelsLocationDropdown" class="location-dropdown d-none position-absolute w-100 bg-white border border-light rounded shadow-lg mt-1 text-start" style="max-height: 300px; overflow-y: auto; z-index: 1050;"></div>
+            </div>
+            <div class="col-lg-2">
+                <label class="form-label">Room Type</label>
+                <select id="roomType" class="form-select">
+                    <option value="">Any</option>
+                    <option value="SINGLE">Single</option>
+                    <option value="DOUBLE">Double</option>
+                    <option value="DELUXE">Deluxe</option>
+                    <option value="SUITE">Suite</option>
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <label class="form-label">Min Price</label>
+                <input id="minPrice" type="number" class="form-control" placeholder="3000">
+            </div>
+            <div class="col-lg-2">
+                <label class="form-label">Max Price</label>
+                <input id="maxPrice" type="number" class="form-control" placeholder="12000">
+            </div>
+            <div class="col-lg-1">
+                <label class="form-label">Sort</label>
+                <select id="sort" class="form-select">
+                    <option value="rating">Rating</option>
+                    <option value="priceAsc">Price low-high</option>
+                    <option value="priceDesc">Price high-low</option>
+                    <option value="name">Name</option>
+                </select>
+            </div>
+            <div class="col-lg-2 d-grid">
+                <button class="btn btn-accent" onclick="loadHotels()">Apply Filters</button>
+            </div>
+            <div class="col-lg-2">
+                <label class="form-label">Check-in</label>
+                <input id="checkIn" type="date" class="form-control">
+            </div>
+            <div class="col-lg-2">
+                <label class="form-label">Check-out</label>
+                <input id="checkOut" type="date" class="form-control">
+            </div>
+        </div>
+    </div>
+    <div class="d-flex justify-content-between align-items-end flex-wrap gap-3 mb-3">
+        <div>
+            <h1 class="section-title">Hotels</h1>
+            <p class="section-copy mb-0">Search, filter, sort, and view date-aware room availability.</p>
+        </div>
+        <div id="resultCount" class="metric-chip">Loading...</div>
+    </div>
+    <div id="hotelResults" class="result-grid"></div>
+</section>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    const qs = new URLSearchParams(window.location.search);
+    ['query', 'checkIn', 'checkOut', 'roomType', 'minPrice', 'maxPrice', 'sort'].forEach((field) => {
+        const value = qs.get(field);
+        if (value && document.getElementById(field)) {
+            document.getElementById(field).value = value;
+        }
+    });
+
+    function cardMarkup(hotel) {
+        const image = hotel.imageUrl || 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?auto=format&fit=crop&w=1200&q=80';
+        const fullyBooked = hotel.availableRooms <= 0;
+        return `
+        <article class="hotel-card">
+            <div class="position-relative">
+                <img class="hotel-thumb" src="${image}" alt="${hotel.name}">
+                ${fullyBooked ? '<div class="position-absolute top-0 start-0 m-2"><span class="badge bg-danger fw-bold px-3 py-2" style="font-size:0.78rem;border-radius:999px;">FULLY BOOKED</span></div>' : ''}
+            </div>
+            <div class="hotel-card-body d-flex flex-column gap-3">
+                <div class="d-flex justify-content-between gap-2 align-items-start">
+                    <div>
+                        <h3 class="mb-1">${hotel.name}</h3>
+                        <div class="text-muted small">${hotel.location} · ${hotel.address}</div>
+                    </div>
+                    <span class="metric-chip">${hotel.rating ? hotel.rating.toFixed(1) : '4.5'} ★</span>
+                </div>
+                <p class="text-muted mb-0">${hotel.description || 'Well-rated hotel with modern comfort and smooth booking flow.'}</p>
+                <div class="d-flex flex-wrap gap-2">
+                    <span class="metric-chip ${fullyBooked ? 'bg-danger text-white' : ''}">${hotel.availableRooms} of ${hotel.totalRooms} rooms available</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-auto">
+                    <div>
+                        <div class="price-display">${hotelApp.formatCurrency(hotel.lowestPricePerNight || 0)}</div>
+                        <small class="text-muted">Starting price / night</small>
+                    </div>
+                    ${fullyBooked
+                        ? '<button class="btn btn-secondary" disabled>Fully Booked</button>'
+                        : `<a class="btn btn-accent" href="/hotels/${hotel.id}">View Details</a>`}
+                </div>
+            </div>
+        </article>`;
+    }
+
+    async function loadHotels() {
+        const params = new URLSearchParams();
+        ['query', 'roomType', 'minPrice', 'maxPrice', 'checkIn', 'checkOut', 'sort'].forEach((field) => {
+            const value = document.getElementById(field) ? document.getElementById(field).value : null;
+            if (value) params.set(field, value);
+        });
+        history.replaceState({}, '', `/hotels?${params.toString()}`);
+        const hotels = await hotelApp.api(`/api/hotels?${params.toString()}`);
+        document.getElementById('resultCount').textContent = `${hotels.length} hotel(s) found`;
+        const container = document.getElementById('hotelResults');
+        container.innerHTML = hotels.length
+            ? hotels.map(cardMarkup).join('')
+            : `<div class="empty-state hotel-card"><h3>No hotels available</h3><p>Try changing city, price range, or room type filters.</p></div>`;
+    }
+
+    loadHotels();
+    hotelApp.buildLocationDropdown('query', 'hotelsLocationDropdown');
+
+    const now = new Date();
+    const tzOffset = now.getTimezoneOffset() * 60000;
+    const today = (new Date(now - tzOffset)).toISOString().slice(0, -1).split('T')[0];
+    document.getElementById('checkIn').min = today;
+    document.getElementById('checkOut').min = today;
+</script>
+</body>
+</html>

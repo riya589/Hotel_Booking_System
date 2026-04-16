@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('HotelHaven | Room Form')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<section class="container py-5" id="roomFormPage" th:attr="data-hotel-id=${hotelId},data-room-id=${roomId}">
+    <div class="row justify-content-center">
+        <div class="col-xl-7">
+            <div class="form-panel">
+                <h1 class="section-title" id="roomFormTitle">Add Room</h1>
+                <p class="section-copy">Maintain room inventory, pricing, and capacity for each hotel.</p>
+                <div id="roomFormAlert" class="alert alert-danger d-none"></div>
+                <form id="roomForm" class="row g-3">
+                    <div class="col-md-6"><label class="form-label">Room Number</label><input id="roomNumber" class="form-control" required></div>
+                    <div class="col-md-6"><label class="form-label">Room Type</label>
+                        <select id="roomType" class="form-select">
+                            <option value="SINGLE">Single</option>
+                            <option value="DOUBLE">Double</option>
+                            <option value="DELUXE">Deluxe</option>
+                            <option value="SUITE">Suite</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4"><label class="form-label">Price per Night</label><input id="pricePerNight" type="number" min="1" class="form-control" required></div>
+                    <div class="col-md-4"><label class="form-label">Capacity</label><input id="capacity" type="number" min="1" max="10" class="form-control" required></div>
+                    <div class="col-md-4"><label class="form-label">Status</label>
+                        <select id="available" class="form-select">
+                            <option value="true">Enabled</option>
+                            <option value="false">Disabled</option>
+                        </select>
+                    </div>
+                    <div class="col-12 d-flex gap-2 justify-content-end">
+                        <a class="btn btn-outline-brand" href="/admin/dashboard">Cancel</a>
+                        <button class="btn btn-accent" type="submit">Save Room</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    hotelApp.requireRole('ROLE_ADMIN');
+    const page = document.getElementById('roomFormPage');
+    const hotelId = page.dataset.hotelId;
+    const roomId = page.dataset.roomId;
+
+    async function initRoomForm() {
+        if (!roomId) {
+            return;
+        }
+        document.getElementById('roomFormTitle').textContent = 'Edit Room';
+        const room = await hotelApp.api(`/api/hotels/rooms/${roomId}`);
+        document.getElementById('roomNumber').value = room.roomNumber;
+        document.getElementById('roomType').value = room.roomType;
+        document.getElementById('pricePerNight').value = room.pricePerNight;
+        document.getElementById('capacity').value = room.capacity;
+        document.getElementById('available').value = room.enabled;
+    }
+
+    document.getElementById('roomForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const alertBox = document.getElementById('roomFormAlert');
+        alertBox.classList.add('d-none');
+        try {
+            const payload = {
+                roomNumber: document.getElementById('roomNumber').value,
+                roomType: document.getElementById('roomType').value,
+                pricePerNight: document.getElementById('pricePerNight').value,
+                capacity: Number(document.getElementById('capacity').value),
+                available: document.getElementById('available').value === 'true'
+            };
+            await hotelApp.api(roomId ? `/api/hotels/rooms/${roomId}` : `/api/hotels/${hotelId}/rooms`, {
+                method: roomId ? 'PUT' : 'POST',
+                body: JSON.stringify(payload)
+            });
+            window.location.href = '/admin/dashboard';
+        } catch (error) {
+            alertBox.textContent = error.message;
+            alertBox.classList.remove('d-none');
+        }
+    });
+
+    initRoomForm();
+</script>
+</body>
+</html>

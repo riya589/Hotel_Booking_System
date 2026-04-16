@@ -1,0 +1,128 @@
+﻿<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('HotelHaven | My Bookings')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<section class="container py-5">
+    <div class="d-flex justify-content-between align-items-end flex-wrap gap-3 mb-4">
+        <div>
+            <h1 class="section-title">My Bookings</h1>
+            <p class="section-copy mb-0">Track status, payment outcome, and access generated invoices.</p>
+        </div>
+        <a class="btn btn-accent" href="/hotels">Book Another Stay</a>
+    </div>
+    <div class="admin-table-wrap">
+        <div id="bookingsContainer"></div>
+    </div>
+</section>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    hotelApp.requireAuth();
+    if (hotelApp.getUser().role === 'ROLE_ADMIN') {
+        window.location.href = '/admin/dashboard';
+    }
+
+    async function loadBookings() {
+        const bookings = await hotelApp.api('/api/bookings/my');
+        const container = document.getElementById('bookingsContainer');
+        if (!bookings.length) {
+            container.innerHTML = `<div class="empty-state"><h3>No bookings found</h3><p>Your upcoming bookings will appear here once you reserve a room.</p></div>`;
+            return;
+        }
+        container.innerHTML = `
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Hotel</th>
+                            <th>Stay</th>
+                            <th>Guests</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${bookings.map((booking) => `
+                            <tr>
+                                <td>
+                                    <div class="fw-bold">${booking.hotelName}</div>
+                                    <div class="small text-muted">${booking.roomType} � ${booking.roomNumber}</div>
+                                </td>
+                                <td>${booking.checkInDate}<br><span class="small text-muted">to ${booking.checkOutDate}</span></td>
+                                <td>${booking.numberOfGuests}</td>
+                                <td>${hotelApp.formatCurrency(booking.totalPrice)}</td>
+                                <td>
+                                    <div class="d-flex flex-column gap-2">
+                                        <span class="status-badge ${hotelApp.toStatusClass(booking.bookingStatus)}">${booking.bookingStatus}</span>
+                                        <span class="status-badge ${hotelApp.toStatusClass(booking.paymentStatus)}">${booking.paymentStatus}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-column gap-2">
+                                        <a class="btn btn-outline-brand btn-sm" href="/invoice/${booking.bookingId}">Invoice</a>
+                                        ${booking.paymentStatus === 'PENDING' ? `<a class="btn btn-accent btn-sm" href="/booking-confirmation?bookingId=${booking.bookingId}">Pay Now</a>` : ''}
+                                        ${booking.bookingStatus !== 'CANCELLED' && booking.bookingStatus !== 'CHECKED_OUT' ? `<button class="btn btn-outline-danger btn-sm" onclick="cancelBooking(${booking.bookingId})">Cancel</button>` : ''}
+                                    </div>
+                                </td>
+                            </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+    }
+
+    const cancelModalHtml = `
+    <div class="modal fade" id="cancelModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+          <div class="modal-header border-bottom-0 pb-0">
+            <h5 class="modal-title fw-bold" id="cancelModalLabel">Cancel Booking</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body py-4">
+            <p class="text-muted mb-4">Please review our cancellation policy before proceeding:</p>
+            <div class="d-grid gap-2 mb-4">
+                <div class="d-flex justify-content-between p-3 bg-light rounded text-muted">
+                    <span>Cancel before 2 days</span>
+                    <strong class="text-success">90% Cashback</strong>
+                </div>
+                <div class="d-flex justify-content-between p-3 bg-light rounded text-muted">
+                    <span>Cancel 1 day before</span>
+                    <strong class="text-warning">70% Cashback</strong>
+                </div>
+                <div class="d-flex justify-content-between p-3 bg-light rounded text-muted">
+                    <span>Cancel within 12 hours</span>
+                    <strong class="text-danger">40% Cashback</strong>
+                </div>
+            </div>
+            <input type="hidden" id="cancelBookingId">
+          </div>
+          <div class="modal-footer border-top-0 pt-0 pb-4 justify-content-between px-4">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Keep Booking</button>
+            <button type="button" class="btn btn-danger" onclick="confirmCancellation()">Confirm Cancellation</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', cancelModalHtml);
+
+    async function cancelBooking(id) {
+        document.getElementById('cancelBookingId').value = id;
+        const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
+        modal.show();
+    }
+
+    async function confirmCancellation() {
+        const id = document.getElementById('cancelBookingId').value;
+        await hotelApp.api(`/api/bookings/${id}/cancel`, { method: 'PUT' });
+        bootstrap.Modal.getInstance(document.getElementById('cancelModal')).hide();
+        loadBookings();
+    }
+
+    loadBookings();
+</script>
+</body>
+</html>

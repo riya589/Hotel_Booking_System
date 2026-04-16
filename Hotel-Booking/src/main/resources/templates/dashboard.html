@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('HotelHaven | Dashboard')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<section class="container py-5">
+    <div class="hero-panel text-center">
+        <span class="hero-kicker">Personalized workspace</span>
+        <h1 class="section-title">Opening your dashboard...</h1>
+        <p class="section-copy">Customers go to booking history and admins go to the management console.</p>
+    </div>
+</section>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    const user = hotelApp.getUser();
+    if (!user) {
+        window.location.href = '/login';
+    } else if (user.role === 'ROLE_ADMIN') {
+        window.location.href = '/admin/dashboard';
+    } else {
+        window.location.href = '/my-bookings';
+    }
+</script>
+</body>
+</html>

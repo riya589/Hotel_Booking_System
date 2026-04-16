@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('HotelHaven | Invoice')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<section class="container py-5" id="invoicePage" th:attr="data-booking-id=${bookingId}">
+    <div class="row justify-content-center">
+        <div class="col-lg-7" id="invoiceContent">
+            <div class="text-center py-5 text-muted">Loading invoice...</div>
+        </div>
+    </div>
+</section>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    hotelApp.requireAuth();
+    const bookingId = document.getElementById('invoicePage').dataset.bookingId;
+
+    async function loadInvoice() {
+        try {
+            const bill = await hotelApp.api(`/api/bookings/${bookingId}/bill`);
+            renderInvoice(bill);
+        } catch (error) {
+            document.getElementById('invoiceContent').innerHTML = `
+                <div class="info-card p-5 text-center">
+                    <div style="font-size:3rem;">📄</div>
+                    <h3 class="mt-3">Invoice Not Found</h3>
+                    <p class="text-muted">${error.message || 'Could not load invoice.'}</p>
+                    <a class="btn btn-accent mt-2" href="/my-bookings">Back to My Bookings</a>
+                </div>`;
+        }
+    }
+
+    function renderInvoice(bill) {
+        const now = new Date();
+        const invoiceNo = `INV-${String(bill.billId).padStart(6, '0')}`;
+        document.getElementById('invoiceContent').innerHTML = `
+            <div class="info-card p-0 overflow-hidden" id="printArea">
+
+                <!-- Header -->
+                <div class="p-4 text-white d-flex justify-content-between align-items-start flex-wrap gap-3"
+                     style="background: linear-gradient(135deg, #102542, #1f4f77);">
+                    <div>
+                        <div class="brand-mark mb-1" style="font-size:1.5rem;"><span>Hotel</span>Haven</div>
+                        <div class="text-white-50 small">Official Invoice & Bill</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold" style="font-size:1.1rem;">${invoiceNo}</div>
+                        <div class="text-white-50 small">Booking #${bill.bookingId}</div>
+                        <div class="text-white-50 small">${new Date(bill.generatedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+                    </div>
+                </div>
+
+                <!-- Hotel & Stay Info -->
+                <div class="px-4 py-3 border-bottom" style="background:#f9f7f4;">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="small text-muted text-uppercase fw-bold mb-1">Hotel</div>
+                            <div class="fw-bold">${bill.hotelName}</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="small text-muted text-uppercase fw-bold mb-1">Room</div>
+                            <div class="fw-bold">${bill.roomType} &mdash; ${bill.roomNumber}</div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="small text-muted text-uppercase fw-bold mb-1">Check-In</div>
+                            <div>${bill.checkInDate}</div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="small text-muted text-uppercase fw-bold mb-1">Check-Out</div>
+                            <div>${bill.checkOutDate}</div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="small text-muted text-uppercase fw-bold mb-1">Total Nights</div>
+                            <div>${bill.totalNights} night${bill.totalNights !== 1 ? 's' : ''}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Billing Breakdown -->
+                <div class="px-4 py-3">
+                    <table class="table table-borderless mb-0">
+                        <tbody>
+                            <tr>
+                                <td class="text-muted ps-0">Base Amount</td>
+                                <td class="text-end pe-0 fw-bold">${hotelApp.formatCurrency(bill.baseAmount)}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted ps-0">Tax (GST)</td>
+                                <td class="text-end pe-0 fw-bold">${hotelApp.formatCurrency(bill.taxAmount)}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted ps-0">Service Charge</td>
+                                <td class="text-end pe-0 fw-bold">${hotelApp.formatCurrency(bill.serviceCharge)}</td>
+                            </tr>
+                            ${Number(bill.discountAmount) > 0 ? `
+                            <tr>
+                                <td class="text-success ps-0">Discount</td>
+                                <td class="text-end pe-0 fw-bold text-success">- ${hotelApp.formatCurrency(bill.discountAmount)}</td>
+                            </tr>` : ''}
+                        </tbody>
+                        <tfoot>
+                            <tr class="border-top">
+                                <th class="ps-0 pt-3" style="font-size:1.1rem;">Total Amount</th>
+                                <th class="text-end pe-0 pt-3" style="font-size:1.25rem; color: var(--accent);">${hotelApp.formatCurrency(bill.finalAmount)}</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- Footer Note -->
+                <div class="px-4 pb-4">
+                    <div class="rounded-3 p-3 text-muted small"
+                         style="background:#f0ede8; border-left: 3px solid var(--accent);">
+                        Thank you for choosing HotelHaven. This is a system-generated invoice and does not require a signature.
+                        For any queries, please contact support with Invoice No. <strong>${invoiceNo}</strong>.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-flex gap-3 mt-4 flex-wrap">
+                <button class="btn btn-accent px-4" onclick="window.print()">🖨️ Print / Save PDF</button>
+                <a class="btn btn-outline-brand px-4" href="/my-bookings">← My Bookings</a>
+            </div>`;
+    }
+
+    loadInvoice();
+</script>
+<style>
+@media print {
+    nav, footer, .d-flex.gap-3.mt-4 { display: none !important; }
+    #invoiceContent { padding: 0 !important; }
+    body { background: white !important; }
+}
+</style>
+</body>
+</html>
